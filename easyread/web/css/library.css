@@ -130,11 +130,11 @@
 @media (max-width: 760px) {
   .topbar .lang-btn, .topbar .help-btn, .topbar .theme-btn { display: none; }  /* 收进 #moreBtn 的菜单 */
   .topbar .more-btn { display: inline-flex; flex: none; }
+  #importBtn span { display: none; }  /* 只留图标（spec §3） */
 }
 @media (max-width: 480px) { .topbar .brand span { display: none; } }  /* 手机上只留图标，搜索框才有地方 */
 @media (max-width: 640px) {
   .topbar .search { margin-left: 8px; width: auto; flex: 1; }
-  .topbar .search kbd, #importBtn span { display: none; }
   .topbar .grow { display: none; }  /* 搜索框已经 flex: 1，空白让给它 */
   .row { grid-template-columns: 40px minmax(0, 1fr); }
   .row .side-info { display: none; }
