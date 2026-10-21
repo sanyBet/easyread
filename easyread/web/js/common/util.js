@@ -169,6 +169,8 @@ window.PR = window.PR || {};
     link: "M8.5 11.5a3 3 0 0 0 4.2 0l2.6-2.6a3 3 0 0 0-4.2-4.2l-1 1M11.5 8.5a3 3 0 0 0-4.2 0l-2.6 2.6a3 3 0 0 0 4.2 4.2l1-1",
     sparkle: "M10 3v4M10 13v4M3 10h4M13 10h4M5.5 5.5l2 2M12.5 12.5l2 2M14.5 5.5l-2 2M7.5 12.5l-2 2",
     question: "M7.5 7.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.4v.8M10 14.5v.01M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16z",
+    sun: "M10 13.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM10 2v1.6M10 16.4V18M2 10h1.6M16.4 10H18M4.3 4.3l1.2 1.2M14.5 14.5l1.2 1.2M15.7 4.3l-1.2 1.2M5.5 14.5l-1.2 1.2",
+    moon: "M16.5 12.3A7 7 0 0 1 7.7 3.5a7 7 0 1 0 8.8 8.8z",
   };
   PR.HL_COLORS = [["yellow", PR.t("黄")], ["green", PR.t("绿")], ["blue", PR.t("蓝")], ["pink", PR.t("红")]];  // pink 历史上叫粉，现在画成红
   PR.logo = (cls) => '<svg class="' + (cls || "mark") + '" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8" fill="#2d6173"/><path d="M16 10.5C13.6 8.8 10.4 8.3 7 8.6v14.2c3.4-.3 6.6.2 9 1.9 2.4-1.7 5.6-2.2 9-1.9V8.6c-3.4-.3-6.6.2-9 1.9z" fill="#f6f3ec"/><path d="M16 10.5v14.2" stroke="#2d6173" stroke-width="1.2"/><path d="M9.4 13.4h4M9.4 16.4h4M9.4 19.4h2.6" stroke="#9fb7bf" stroke-width="1.6" stroke-linecap="round"/><path d="M18.6 13.4h4M18.6 16.4h4M18.6 19.4h2.6" stroke="#e0a84f" stroke-width="1.6" stroke-linecap="round"/></svg>';

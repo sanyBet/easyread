@@ -4,13 +4,10 @@ window.PR = window.PR || {};
 (function (PR) {
   "use strict";
 
-  const SUN = "M10 13.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM10 2v1.6M10 16.4V18M2 10h1.6M16.4 10H18M4.3 4.3l1.2 1.2M14.5 14.5l1.2 1.2M15.7 4.3l-1.2 1.2M5.5 14.5l-1.2 1.2";
-  const MOON = "M16.5 12.3A7 7 0 0 1 7.7 3.5a7 7 0 1 0 8.8 8.8z";
-  const svg = (d) => '<svg class="i" viewBox="0 0 20 20" aria-hidden="true"><path d="' + d + '"/></svg>';
   const dark = () => document.documentElement.dataset.theme === "dark";
 
   function paint(btn) {
-    btn.innerHTML = svg(dark() ? SUN : MOON);
+    btn.innerHTML = PR.icon(dark() ? "sun" : "moon");
     btn.title = dark() ? PR.t("换成浅色") : PR.t("换成深色");
   }
 

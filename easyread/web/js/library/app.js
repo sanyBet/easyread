@@ -9,6 +9,19 @@
 
   PR.$("#importBtn").innerHTML = PR.icon("plus", "sm") + "<span>" + PR.t("导入论文") + "</span>";
   PR.$("#settingsBtn").innerHTML = PR.icon("gear");
+  /* 窄屏（≤760px）顶栏放不下主题、语言、帮助三个按钮，收进“⋯”；点菜单项就是点那个按钮 */
+  const moreBtn = PR.$("#moreBtn");
+  moreBtn.innerHTML = PR.icon("more");
+  moreBtn.title = PR.t("更多");
+  moreBtn.setAttribute("aria-label", moreBtn.title);
+  moreBtn.addEventListener("click", () => {
+    const dark = document.documentElement.dataset.theme === "dark", lang = PR.$("#langBtn");
+    PR.menu(moreBtn, [
+      { label: dark ? PR.t("换成浅色") : PR.t("换成深色"), icon: dark ? "sun" : "moon", fn: () => PR.$(".theme-btn").click() },
+      lang.hidden ? null : { label: PR.t("切换到英文界面"), icon: "en", fn: () => lang.click() },
+      { label: PR.t("帮助与关于"), icon: "question", fn: () => PR.$("#helpBtn").click() },
+    ].filter(Boolean));
+  });
   PR.$(".search .si").outerHTML = PR.icon("search");
   PR.$("#sort").value = L.sort;
 

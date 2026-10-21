@@ -48,7 +48,7 @@
   function showBar() {
     const acts = actionsFor(current).filter((a) => !a.menuOnly);
     bar().innerHTML = acts.map((a, i) => '<button data-i="' + i + '" title="' + PR.esc(a.label) + (a.kbd ? PR.t("（{k}）", { k: a.kbd }) : "") + '">' + PR.icon(a.icon, "sm") + "<span>" + PR.esc(a.label) + "</span></button>").join("") +
-      '<button data-i="more" title="' + PR.t("更多（右键段落也可以）") + '">⋯</button>';
+      '<button data-i="more" title="' + (matchMedia("(pointer: coarse)").matches ? PR.t("更多") : PR.t("更多（右键段落也可以）")) + '">⋯</button>';  // 触屏没有右键
     bar().onclick = (e) => {
       const b = e.target.closest("[data-i]");
       if (!b) return;

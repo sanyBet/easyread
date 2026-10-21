@@ -148,6 +148,7 @@
     if (e.target.closest("[data-add]")) return startAdd("");
     if (e.target.closest("[data-recent]")) { ui.recentOpen = !ui.recentOpen; return L.render(); }
     if (!row) return;
+    if (row.dataset.view || row.dataset.cat) closeDrawer();
     if (row.dataset.view) { L.view = row.dataset.view; L.tag = null; L.render(); }
     else if (row.dataset.cat) {
       L.tag = L.tag === row.dataset.cat ? null : row.dataset.cat; L.view = "all";
@@ -199,6 +200,19 @@
     document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
   });
   grip.addEventListener("dblclick", () => { setW(248); PR.ls.set("easyread-side-w", 248); });
+
+  /* 窄屏（≤1100px）侧栏收成左侧抽屉：顶栏最左的按钮开合，点遮罩、选中分类、按 Esc 收起。宽屏下这个类不起作用 */
+  const sideBtn = PR.$("#sideBtn");
+  sideBtn.innerHTML = PR.icon("menu");
+  sideBtn.title = PR.t("分类与回收站");
+  sideBtn.setAttribute("aria-label", sideBtn.title);
+  const mask = PR.el("div", { class: "side-mask" });
+  lib.appendChild(mask);
+  const setDrawer = (open) => { lib.classList.toggle("side-open", open); sideBtn.setAttribute("aria-expanded", String(open)); };
+  function closeDrawer() { setDrawer(false); }
+  sideBtn.addEventListener("click", () => setDrawer(!lib.classList.contains("side-open")));
+  mask.addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
 
   /* 把论文从列表拖到侧栏的分类上 */
   let dragId = null;

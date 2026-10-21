@@ -89,3 +89,27 @@ test("missing, mismatched and corrupted contexts and blocked storage fall back t
   await blocked.boot(); blocked.PR.lib.openReader("p1");
   assert.equal(blocked.location.pathname, "/read/p1"); assert.equal(blocked.location.search, "");
 });
+
+test("side drawer toggles and closes on category pick", async () => {
+  const p = page().library(papers()); await p.boot();
+  const classes = new Set();
+  p.node(".lib").classList = {
+    toggle(name, force) { const on = force ?? !classes.has(name); if (on) classes.add(name); else classes.delete(name); return on; },
+    add(name) { classes.add(name); }, remove(name) { classes.delete(name); }, contains: name => classes.has(name),
+  };
+  const pick = row => ({ detail: 1, target: { closest: sel => (sel === ".srow" ? row : null) } });
+  p.node("#sideBtn").click();
+  assert.ok(classes.has("side-open"));
+  p.node("#side").click(pick({ dataset: { cat: "分类" }, querySelector: () => null }));
+  assert.equal(p.PR.lib.tag, "分类");
+  assert.ok(!classes.has("side-open"));
+  p.node("#sideBtn").click();
+  p.node("#side").click(pick({ dataset: { view: "unread" } }));
+  assert.equal(p.PR.lib.view, "unread");
+  assert.ok(!classes.has("side-open"));
+  p.node("#sideBtn").click();
+  for (const fn of p.listeners.get("keydown")) fn({ key: "Escape", target: { closest: () => null } });
+  assert.ok(!classes.has("side-open"));
+  p.node("#sideBtn").click(); p.node("#sideBtn").click();
+  assert.ok(!classes.has("side-open"));
+});

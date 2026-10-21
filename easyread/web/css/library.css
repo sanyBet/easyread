@@ -4,6 +4,10 @@
   padding: 0 10px; border-radius: 9px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--rule);
   color: var(--ink-3);
 }
+.topbar { flex-wrap: nowrap; }
+.topbar .search, .topbar .search input { min-width: 0; }
+.topbar > button { flex: none; }  /* 空间不够时只压搜索框，按钮不被挤扁 */
+.topbar .side-btn, .topbar .more-btn, .side-mask { display: none; }  /* 只在窄屏出现，见下面 1100 / 760 两段 */
 .topbar .search:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .topbar .search input { flex: 1; border: 0; outline: 0; background: none; height: 100%; color: var(--ink); font-size: 13.5px; }
 .topbar .search input::-webkit-search-cancel-button { display: none; }
@@ -62,6 +66,7 @@
 
 /* 详情 */
 .detail { border-left: 1px solid var(--rule); background: var(--surface); overflow-y: auto; overflow-x: hidden; }
+.lib:not(.has-detail) .detail { border-left: 0; }  /* 关着的详情列 0 宽，边框会画在视口外，多出 1px 横向滚动 */
 .detail-inner { padding: 22px 24px 50px; width: 400px; }
 .detail .cover { display: flex; gap: 16px; }
 .detail .cover .thumb { width: 92px; height: 120px; flex: none; }
@@ -114,10 +119,23 @@
   .side { display: none; }
   .lib > .main { grid-column: 2; }  /* 侧栏 display:none 后不占格子，不钉住的话 main 会掉进 0 宽的第一列，整页空白 */
   .lib.has-detail .detail { position: fixed; right: 0; top: var(--bar-h); bottom: 0; width: min(400px, 100vw); box-shadow: var(--shadow-lg); z-index: 20; }
+  .topbar .search { margin-left: 12px; }
+  .topbar .search kbd { display: none; }
+  .topbar .engine-chip { max-width: 160px; }
+  /* 侧栏改成左侧抽屉（sidebar.js 的 #sideBtn），压在详情抽屉上面 */
+  .topbar .side-btn { display: inline-flex; flex: none; margin-right: -4px; }
+  .lib.side-open .side { position: fixed; left: 0; top: var(--bar-h); bottom: 0; width: min(300px, 86vw); display: block; z-index: 30; box-shadow: var(--shadow-lg); background: var(--bg); }
+  .lib.side-open .side-mask { display: block; position: fixed; inset: var(--bar-h) 0 0 0; z-index: 29; background: rgba(0, 0, 0, .28); }
 }
+@media (max-width: 760px) {
+  .topbar .lang-btn, .topbar .help-btn, .topbar .theme-btn { display: none; }  /* 收进 #moreBtn 的菜单 */
+  .topbar .more-btn { display: inline-flex; flex: none; }
+}
+@media (max-width: 480px) { .topbar .brand span { display: none; } }  /* 手机上只留图标，搜索框才有地方 */
 @media (max-width: 640px) {
   .topbar .search { margin-left: 8px; width: auto; flex: 1; }
   .topbar .search kbd, #importBtn span { display: none; }
+  .topbar .grow { display: none; }  /* 搜索框已经 flex: 1，空白让给它 */
   .row { grid-template-columns: 40px minmax(0, 1fr); }
   .row .side-info { display: none; }
   .thumb { width: 40px; height: 52px; }
