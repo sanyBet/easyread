@@ -5,11 +5,12 @@ import tempfile
 import threading
 import time
 import unittest
+import urllib.error
 import urllib.request
 from unittest.mock import patch
 
 from easyread.app import config
-from easyread.server import launch, server
+from easyread.server import launch, server, web_mode
 
 # 浏览器是 0.4 秒后才开的，多等一点再断言没开
 BROWSER_TIMER_WAIT = 0.6
@@ -63,6 +64,40 @@ class ServerModeHttpTest(unittest.TestCase):
         with patch.object(server.updates, "check", return_value={"latest": "x"}) as check:
             self.assertEqual(self.get("/api/update"), {"latest": "x"})
         check.assert_called_once()
+
+    def request(self, method: str, path: str, token: str = "") -> tuple[int, dict]:
+        req = urllib.request.Request(self.url + path, data=b"{}" if method == "POST" else None,
+                                     headers={"X-Token": token}, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return resp.status, json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read())
+
+    def test_blocked_paths_return_web_unavailable(self):
+        token = self.get("/api/library")["token"]
+        with patch.dict(os.environ, {"EASYREAD_MODE": "server"}):
+            cases = [("POST", p) for p in sorted(web_mode.BLOCKED_POST)]
+            cases += [("GET", "/api/zotero/detect"), ("POST", "/api/library/reveal?x=1"),
+                      ("POST", "/api/p/abc/reveal/"), ("POST", "/api/p/abc/reveal")]
+            for method, path in cases:
+                with self.subTest(method=method, path=path):
+                    status, body = self.request(method, path, token)
+                    self.assertEqual(status, 403)
+                    self.assertEqual(body["error"], "web_unavailable")
+                    self.assertTrue(body["message"])
+
+    def test_blocked_paths_untouched_in_desktop_mode(self):
+        os.environ.pop("EASYREAD_MODE", None)
+        self.assertFalse(web_mode.blocked("POST", "/api/library/reveal"))
+        with patch.object(server.bulk_api.locate, "candidates", return_value=[]):
+            status, _ = self.request("GET", "/api/zotero/detect")
+        self.assertEqual(status, 200)
+
+    def test_migrate_status_still_allowed(self):
+        with patch.dict(os.environ, {"EASYREAD_MODE": "server"}):
+            status, _ = self.request("GET", "/api/migrate/status")
+        self.assertEqual(status, 200)
 
 
 class _OneShotServer(launch._Server):

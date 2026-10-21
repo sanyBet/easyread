@@ -19,7 +19,7 @@ from ..app import cli_models, config, i18n, open_link, prefs, updates
 from ..engines import detect, engines, usage
 from ..translate import langs
 from ..library import trash
-from . import settings_api, library_api, jobs_api, paper_api, wsock
+from . import settings_api, library_api, jobs_api, paper_api, web_mode, wsock
 from ..app.log import log, tail
 from ..bulk import api as bulk_api
 from .jobs import Jobs
@@ -140,6 +140,8 @@ class Handler(BaseHTTPRequestHandler):
     def _get(self):
         url = urlparse(self.path)
         path = unquote(url.path)
+        if web_mode.blocked("GET", path):
+            return self._json(403, web_mode.body())
         app, lib = self.app, self.app.lib
         if path in ("/", "/index.html"):
             return self._page(WEB / "library.html")
@@ -286,6 +288,8 @@ class Handler(BaseHTTPRequestHandler):
     def _post(self):
         url = urlparse(self.path)
         path = unquote(url.path)
+        if web_mode.blocked("POST", path):
+            return self._json(403, web_mode.body())
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
         app, lib = self.app, self.app.lib
 

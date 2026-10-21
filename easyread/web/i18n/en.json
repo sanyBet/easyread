@@ -1326,5 +1326,6 @@
   "图片格式不支持或尺寸过大": "The image format is unsupported or its dimensions are too large.",
   "图片转存后过大，请缩小图片后重新粘贴": "The decoded image is too large. Resize it and paste it again.",
   "图片无法读取，请重新复制后粘贴": "Could not read the image. Copy and paste it again.",
-  "图片目录无效": "Invalid image directory."
+  "图片目录无效": "Invalid image directory.",
+  "Web 端不可用，请在桌面 App 中操作": "Not available on the web. Please use the desktop app."
 }
