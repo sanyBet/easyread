@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import threading
 import time
 import webbrowser
@@ -16,10 +17,25 @@ from .presence import Presence
 from .server import App, Handler
 from ..library.store import now_iso, read_json, write_json_atomic
 
+BIND_FAILED_EXIT_CODE = 1
+
 
 class _Server(ThreadingHTTPServer):
     # Windows 上 SO_REUSEADDR 会让两个进程同时占住 8765，浏览器随机连到其中一个（比如旧版本）
     allow_reuse_address = os.name != "nt"
+
+
+def _bind(port: int) -> _Server:
+    try:
+        return _Server(("127.0.0.1", port), Handler)
+    except OSError as e:
+        if config.server_mode():
+            # cloudflared 固定连 127.0.0.1:8765，换随机端口只会让服务"假活着"；退出非零让 systemd 重试
+            message = f"服务器模式绑定 127.0.0.1:{port} 失败：{e}；不改用随机端口，退出"  # i18n-ok 运维日志
+            log.error(message)
+            print(message, file=sys.stderr, flush=True)  # 日志只在终端才回显，journalctl 要靠这行
+            raise SystemExit(BIND_FAILED_EXIT_CODE) from e
+        return _Server(("127.0.0.1", 0), Handler)
 
 
 def serve(port: int | None = None, open_browser: bool = False, path: str = "/", exit_on_close: bool = False):
@@ -35,10 +51,7 @@ def serve(port: int | None = None, open_browser: bool = False, path: str = "/", 
     Handler.app = app
     detect.warm(cfg)
     port = cfg["port"] if port is None else port
-    try:
-        httpd = _Server(("127.0.0.1", port), Handler)
-    except OSError:
-        httpd = _Server(("127.0.0.1", 0), Handler)
+    httpd = _bind(port)
     url = f"http://127.0.0.1:{httpd.server_address[1]}"
     log.info("startup http-bound +%.0fms", (time.monotonic() - started) * 1000)
     app.shutdown = httpd.shutdown

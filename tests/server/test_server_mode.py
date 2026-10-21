@@ -1,12 +1,16 @@
 """EASYREAD_MODE=server：接口报 mode、不查更新、不开浏览器也不随页面关闭退出。  python -m unittest tests.server.test_server_mode"""
+import io
 import json
 import os
+import shutil
+import socket
 import tempfile
 import threading
 import time
 import unittest
 import urllib.error
 import urllib.request
+from contextlib import redirect_stderr
 from unittest.mock import patch
 
 from easyread.app import config
@@ -79,7 +83,8 @@ class ServerModeHttpTest(unittest.TestCase):
         with patch.dict(os.environ, {"EASYREAD_MODE": "server"}):
             cases = [("POST", p) for p in sorted(web_mode.BLOCKED_POST)]
             cases += [("GET", "/api/zotero/detect"), ("POST", "/api/library/reveal?x=1"),
-                      ("POST", "/api/p/abc/reveal/"), ("POST", "/api/p/abc/reveal")]
+                      ("POST", "/api/p/abc/reveal/"), ("POST", "/api/p/abc/reveal"),
+                      ("POST", "/api/p/abc/reveal/x")]
             for method, path in cases:
                 with self.subTest(method=method, path=path):
                     status, body = self.request(method, path, token)
@@ -115,6 +120,41 @@ class ServeInServerModeTest(unittest.TestCase):
             time.sleep(BROWSER_TIMER_WAIT)
         browser_open.assert_not_called()
         self.assertIs(server.Handler.app.presence.enabled, False)
+
+
+class ServeBindFailureTest(unittest.TestCase):
+    """端口被占：服务器模式退出非零让 systemd 重试；桌面模式照旧换随机端口。"""
+
+    def setUp(self):
+        self.blocker = socket.socket()
+        self.blocker.bind(("127.0.0.1", 0))
+        self.blocker.listen()
+        self.addCleanup(self.blocker.close)
+        self.port = self.blocker.getsockname()[1]
+        library = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, library, True)
+        self.env = {"EASYREAD_LIBRARY": library}
+
+    def serve(self):
+        with patch.object(launch, "_Server", _OneShotServer), patch.object(launch, "setup_log"), \
+                patch.object(launch.detect, "warm"):
+            launch.serve(self.port)
+
+    def test_server_mode_exits_nonzero_instead_of_random_port(self):
+        with patch.dict(os.environ, {**self.env, "EASYREAD_MODE": "server"}), \
+                redirect_stderr(io.StringIO()) as stderr, self.assertRaises(SystemExit) as caught:
+            self.serve()
+        self.assertEqual(caught.exception.code, launch.BIND_FAILED_EXIT_CODE)
+        self.assertNotEqual(caught.exception.code, 0)
+        self.assertIn(f"127.0.0.1:{self.port}", stderr.getvalue())
+
+    def test_desktop_mode_still_falls_back_to_another_port(self):
+        with patch.dict(os.environ, self.env):
+            os.environ.pop("EASYREAD_MODE", None)
+            self.serve()
+        bound_port = server.Handler.app.shutdown.__self__.server_address[1]
+        self.assertNotEqual(bound_port, self.port)
+        self.assertGreater(bound_port, 0)
 
 
 if __name__ == "__main__":

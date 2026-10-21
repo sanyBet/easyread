@@ -13,7 +13,7 @@ BLOCKED_POST = frozenset({
 })
 BLOCKED_GET = frozenset({"/api/zotero/detect"})
 # 论文 id 不定，单独按正则挡；在查论文之前挡住，不存在的 id 也回 403 而不是 404
-_REVEAL_PAPER = re.compile(r"^/api/p/[^/]+/reveal/?$")
+_REVEAL_PAPER = re.compile(r"^/api/p/[^/]+/reveal(/|$)")
 
 
 def blocked(method: str, path: str) -> bool:
