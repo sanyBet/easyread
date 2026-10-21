@@ -185,7 +185,7 @@ python -m unittest discover tests         # 翻译调度等单元测试
 node tests/e2e.cjs library/<论文ID>       # 浏览器端到端测试（需要 Playwright 和一篇已译好的论文）
 ```
 
-设计取舍见 [docs/design.md](docs/design.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)。
+设计取舍见 [docs/design.md](docs/design.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)。部署到自己的服务器、经 Cloudflare Access 从浏览器访问，见 [docs/server-deploy.md](docs/server-deploy.md)。
 
 ## 许可
 

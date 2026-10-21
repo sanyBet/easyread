@@ -154,7 +154,7 @@ python -m unittest discover tests         # unit tests
 node tests/e2e.cjs library/<paper-id>     # browser end-to-end test (needs Playwright and a translated paper)
 ```
 
-Design notes in [docs/design.md](docs/design.md), changes in [CHANGELOG.md](CHANGELOG.md) (both in Chinese).
+Design notes in [docs/design.md](docs/design.md), changes in [CHANGELOG.md](CHANGELOG.md) (both in Chinese). To self-host as a web server behind Cloudflare Access, see [docs/server-deploy.md](docs/server-deploy.md) (in Chinese).
 
 ## License
 

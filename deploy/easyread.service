@@ -1,0 +1,21 @@
+[Unit]
+Description=EasyRead web server (behind Cloudflare Tunnel + Access)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/apps/easyread
+Environment=EASYREAD_MODE=server
+Environment=EASYREAD_HOME=/home/ubuntu/easyread-data
+Environment=PATH=/home/ubuntu/.local/node/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONIOENCODING=utf-8
+ExecStart=/home/ubuntu/apps/easyread/.venv/bin/python -m easyread serve --port 8765
+Restart=always
+RestartSec=3
+MemoryMax=1200M
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
