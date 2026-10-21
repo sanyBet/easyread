@@ -89,6 +89,8 @@ status: draft
 | 4 | Access policy | Allow，include `email = $EASYREAD_ACCESS_EMAIL` |
 | 5 | Login page 品牌 | 组织名 `EasyRead`、背景 `#f6f3ec`、Logo（仓库内 `easyread/web/favicon.svg` 对应的 PNG，用 GitHub raw URL 或现有可公开地址） |
 
+执行顺序（实现偏离上表编号）：One-time PIN → 3 → 4 → 5 → 2 → 1。DNS 和 ingress 一旦生效域名就对公网可达，必须等 Access 应用和策略都确认存在后才执行，任何时刻都不能出现未鉴权窗口；前面任一步失败，脚本停止，不碰 DNS 和 ingress。
+
 风险：登录页品牌是账号级设置，会影响同一 Cloudflare 账号下的其他 Access 应用。脚本先列出现有 Access 应用；如果有其他应用，跳过步骤 5，交给用户决定。
 
 token 需要的权限：Account → Cloudflare Tunnel Edit、Access: Apps and Policies Edit、Access: Organizations, Identity Providers, and Groups Edit；Zone vizce.com → DNS Edit。

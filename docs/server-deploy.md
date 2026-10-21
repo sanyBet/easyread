@@ -85,7 +85,7 @@ export EASYREAD_ACCESS_EMAIL=...
 | `deploy/easyread.service` | systemd unit：`EASYREAD_MODE=server`、端口 8765、`Restart=always`、`MemoryMax=1200M` |
 | `deploy/t22_update.sh` | 升级：`git pull --ff-only` → `pip install -e .` → 重启 → 15 秒内等 `/api/version` 成功，否则 exit 1 |
 | `deploy/backup.sh` | 备份 `~/easyread-data` 到 `~/easyread-backups/easyread-YYYY-MM-DD.tgz`，保留最新 7 份 |
-| `deploy/cloudflare_access.sh` | 幂等配置 tunnel ingress、DNS、One-time PIN、Access 应用与策略、登录页品牌；支持 `--dry-run`；PUT 前备份到 `~/.easyread-cf-backups/` |
+| `deploy/cloudflare_access.sh` | 幂等配置 One-time PIN、Access 应用与策略、登录页品牌，最后才配 DNS 和 tunnel ingress；支持 `--dry-run`；PUT 前备份到 `~/.easyread-cf-backups/` |
 | `deploy/cf_json.py` | `cloudflare_access.sh` 用的 JSON 处理子命令（仅标准库） |
 
 ### 首次安装
@@ -123,16 +123,19 @@ export EASYREAD_ACCESS_EMAIL=...
    deploy/cloudflare_access.sh
    ```
 
-   每一步输出一行结果：
+   按下表顺序执行，每一步输出一行结果。先配好 Access 再发布入口：DNS 和 ingress 一生效域名就对公网可达，所以放在最后，且只在 Access 应用和策略都确认存在时才执行，任何时刻都不出现未鉴权窗口。
 
    | 步骤 | 内容 | 结果取值 |
    |---|---|---|
-   | `tunnel-ingress` | 在兜底 `http_status:404` 规则前插入 `easyread.vizce.com → http://127.0.0.1:8765`，其他规则不动 | `created` / `exists` |
-   | `dns` | `easyread` CNAME → `<CF_TUNNEL_ID>.cfargotunnel.com`，proxied | `created` / `exists` |
    | `otp-idp` | 身份提供方 One-time PIN | `created` / `exists` |
    | `access-app` | self-hosted，会话 `720h`，只用 One-time PIN，自动跳转 | `created` / `exists` |
    | `access-policy` | Allow，include 放行邮箱 | `created` / `exists` |
    | `login-branding` | 登录页背景 `#f6f3ec`、文字 `#23211d`、Logo、标题 `EasyRead` | `created` / `exists` / `skipped`（有其他 Access 应用时） |
+   | `access-guard` | 重新确认 Access 应用和策略都存在；缺任一项报错退出，不碰 DNS 和 ingress | `app and policy confirmed`（dry-run 只打印说明） |
+   | `dns` | `easyread` CNAME → `<CF_TUNNEL_ID>.cfargotunnel.com`，proxied | `created` / `exists` |
+   | `tunnel-ingress` | 在兜底 `http_status:404` 规则前插入 `easyread.vizce.com → http://127.0.0.1:8765`，其他规则不动 | `created` / `exists` |
+
+   dry-run 先打印计划顺序；Access 应用或策略尚不存在时不报错（正式运行会先创建它们）。
 
    脚本出错时打印 `HTTP 状态码: Cloudflare 错误码: 信息` 后停止；修好权限后重跑即可，已完成的步骤显示 `exists`。
 
@@ -223,4 +226,4 @@ curl -sf http://127.0.0.1:8765/api/version
 | V7 | 自愈 | `sudo kill -9 $(systemctl show -p MainPID --value easyread)`，10 秒内 `systemctl is-active easyread` 为 active | |
 | V8 | web 端禁用接口 | 登录后访问 `/api/library/reveal` 等接口返回 403 `web_unavailable` | |
 | V9 | 备份 | 手动运行 `deploy/backup.sh`，`~/easyread-backups` 下出现当天 tgz，`tar tzf` 可列出 `easyread-data/` | |
-| V10 | 幂等 | 再次运行 `deploy/cloudflare_access.sh --dry-run`，所有步骤为 `exists` 或 `skipped` | |
+| V10 | 幂等 | 再次运行 `deploy/cloudflare_access.sh --dry-run`，除 `access-guard` 说明行外所有步骤为 `exists` 或 `skipped` | |

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Idempotent Cloudflare setup for easyread.vizce.com:
-# tunnel ingress, DNS CNAME, One-time PIN IdP, Access app + policy, login branding.
+# One-time PIN IdP, Access app + policy, login branding, then DNS CNAME and tunnel ingress
+# (Access first, so the hostname is never public without protection).
 # Usage: deploy/cloudflare_access.sh [--dry-run]
 # Never add `set -x`: the token is read from env into a header file.
 set -euo pipefail
@@ -241,15 +242,38 @@ step_login_branding() {
   report "login-branding" "created (previous org saved to ${backup})"
 }
 
+# Fails closed: DNS and ingress publish the hostname, so they must never run before Access guards it.
+require_access_ready() {
+  local app_id="$1" out="${WORK_DIR}/policies_check.json"
+  if [[ "$is_dry_run" == 1 ]]; then
+    report "access-guard" "dry-run: dns and tunnel-ingress would run only after app and policy exist"
+    return
+  fi
+  if [[ -z "$app_id" ]]; then
+    echo "error: Access app for ${APP_HOST} not found; refusing to create DNS or tunnel ingress" >&2
+    exit 1
+  fi
+  cf_call GET "${ACCOUNT_PATH}/access/apps/${app_id}/policies" "$out"
+  if ! json_tool policy_exists "$out" "$POLICY_NAME"; then
+    echo "error: Access policy '${POLICY_NAME}' missing; refusing to create DNS or tunnel ingress" >&2
+    exit 1
+  fi
+  report "access-guard" "app and policy confirmed"
+}
+
 main() {
-  [[ "$is_dry_run" == 1 ]] && echo "dry-run: GET requests only, no changes will be made"
-  step_tunnel_ingress
-  step_dns
+  if [[ "$is_dry_run" == 1 ]]; then
+    echo "dry-run: GET requests only, no changes will be made"
+    echo "plan: otp-idp -> access-app -> access-policy -> login-branding -> dns -> tunnel-ingress"
+  fi
   local idp_id app_id
   idp_id="$(ensure_otp_idp)"
   app_id="$(ensure_access_app "$idp_id")"
   ensure_access_policy "$app_id"
   step_login_branding
+  require_access_ready "$app_id"
+  step_dns
+  step_tunnel_ingress
 }
 
 main
