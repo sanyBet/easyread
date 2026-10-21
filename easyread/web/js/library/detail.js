@@ -189,7 +189,8 @@
       { label: PR.t("复制 BibTeX"), icon: "copy", fn: () => copy(PR.cite(i, "bibtex"), " BibTeX") },
       { label: PR.t("导出离线 HTML（可发给别人）"), icon: "download", fn: () => { PR.toast(PR.t("正在打包…")); location.href = "/api/p/" + id + "/export"; } },
       { label: PR.t("导出手机版（只读，体积小）"), icon: "download", fn: () => { PR.toast(PR.t("正在打包…")); location.href = "/api/p/" + id + "/export?mobile=1"; } },
-      { label: PR.t("打开所在文件夹"), icon: "folder", fn: () => PR.api("/api/p/" + id + "/reveal", { method: "POST", body: {} }).catch((e) => PR.toast(PR.esc(e.message))) },
+      // 服务器上的文件夹在别人的机器里，打开不了
+      ...(PR.serverMode ? [] : [{ label: PR.t("打开所在文件夹"), icon: "folder", fn: () => PR.api("/api/p/" + id + "/reveal", { method: "POST", body: {} }).catch((e) => PR.toast(PR.esc(e.message))) }]),
       { label: PR.t("全部重新翻译"), icon: "redo", fn: () => retranslateAll(i) },
       { label: PR.t("翻译记录"), icon: "log", fn: async () => { const r = await PR.api("/api/p/" + id + "/log"); PR.showText(PR.t("翻译记录"), r.text); } },
       { label: PR.t("移到回收站"), icon: "trash", fn: async () => {

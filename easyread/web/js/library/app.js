@@ -2,6 +2,7 @@
 (function (PR) {
   "use strict";
   const L = (PR.lib = { items: [], loadStatus: "loading", loadError: "", view: "all", tag: null, q: "", sort: PR.ls.get("easyread-sort", "opened"), selected: null, engine: "claude", picked: new Set(), picking: false });
+  PR.serverMode = false;  // /api/library 回来前按桌面版处理；用到的地方都在点击/渲染时再读
   const prefs = PR.ls.get("easyread-prefs", {});
   PR.applyTheme(prefs.theme);
 
@@ -102,6 +103,7 @@
     L.engine = d.engine;
     L.engineLabel = d.engine_label;
     L.firstRun = d.first_run;
+    L.serverMode = d.mode === "server"; PR.serverMode = L.serverMode;
     L.version = d.version;
     L.trashCount = d.trash || 0;
     L.items = d.items;

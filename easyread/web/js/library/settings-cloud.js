@@ -63,6 +63,8 @@
     render(s) {
       if (!s.cloud && !s.cloudLoading && !s.cloudError) load(s);
       const d = s.cloud;
+      // Web 端只给看路径：迁移、打开文件夹、重启都要动服务器本机
+      if (d && PR.serverMode) return '<div class="cloud-settings"><p class="cloud-path">' + PR.esc(PR.t("文献库位置：{path}（Web 端不可更改）", { path: d.path })) + "</p></div>";
       if (!d) return '<div class="cloud-settings">' + (s.cloudError ? '<p class="bad">' + PR.esc(s.cloudError) + "</p>" : "") +
         '<p class="hint">' + (s.cloudLoading ? PR.t("正在检查文献库位置…") : "") + "</p>" + button("refresh", PR.t("重试"), "", s.cloudLoading) + "</div>";
       const inCloud = cloudOf(d), others = (d.candidates || []).filter((c) => c.path !== d.path);

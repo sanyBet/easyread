@@ -76,8 +76,10 @@
     if (e.target.closest("#pick")) PR.$("#fileInput").click();
     if (e.target.closest("#arxivGo")) importRef(PR.$("#arxivRef").value);
     if (e.target.closest("#impEngine")) { close(); PR.openSettings(); }
-    if (e.target.closest("#zoteroGo")) { close(); PR.openZotero(); }
-    if (e.target.closest("#folderGo")) { close(); PR.openFolderImport(); }
+    // 文件夹和 Zotero 导入都要读服务器本机的路径，Web 端只提示
+    if (e.target.closest("#zoteroGo, #folderGo") && PR.serverMode) PR.toast(PR.t("Web 端不可用，请在桌面 App 中操作"));
+    else if (e.target.closest("#zoteroGo")) { close(); PR.openZotero(); }
+    else if (e.target.closest("#folderGo")) { close(); PR.openFolderImport(); }
     const a = e.target.closest("[data-after]");
     if (a && !a.disabled) {
       savePref({ after: a.dataset.after });
