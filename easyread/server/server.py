@@ -163,13 +163,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, {"items": lib.list(), "token": app.token, "jobs": app.jobs.small_status(),
                                     "library_status": app.location.status, "other_device": app.location.marker.other_device(),
                                     "engine": cfg.get("engine"), "engine_label": cli_models.engine_label(cfg),
-                                    "first_run": config.is_first_run(), "version": __version__, "trash": len(trash.items(lib.root))})
+                                    "first_run": config.is_first_run(), "version": __version__, "trash": len(trash.items(lib.root)),
+                                    "mode": config.mode()})
         if path == "/api/update":  # 有没有新版本（一天最多问一次 GitHub）
+            if config.server_mode():  # 服务器上由部署方升级，不去问 GitHub
+                return self._json(200, {"disabled": True})
             return self._json(200, updates.check(force=parse_qs(url.query).get("force") == ["1"]))
         if path == "/api/trash":
             return self._json(200, {"items": trash.items(lib.root)})
         if path == "/api/config":
-            return self._json(200, {"config": config.public(config.load()), "presets": config.PRESETS, "groups": config.PRESET_GROUPS})
+            return self._json(200, {"config": config.public(config.load()), "presets": config.PRESETS, "groups": config.PRESET_GROUPS,
+                                    "mode": config.mode()})
         if path == "/api/engines":
             cfg = config.load()
             found = detect.detect(cfg, fresh=parse_qs(url.query).get("fresh") == ["1"])
@@ -265,7 +269,8 @@ class Handler(BaseHTTPRequestHandler):
     def _presence(self):
         """页面开着就一直连着这条 WebSocket；断开就是页面关了（见 presence.py）。"""
         host = self.headers.get("Host") or ""
-        if self.headers.get("Origin") not in (None, f"http://{host}"):  # 别的网站不能来占着
+        # 别的网站不能来占着；https 是服务器部署时经反向代理访问
+        if self.headers.get("Origin") not in (None, f"http://{host}", f"https://{host}"):
             self.close_connection = True
             return self._json(403, {"error": "bad origin"})
         p = self.app.presence

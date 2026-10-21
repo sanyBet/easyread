@@ -96,6 +96,17 @@ class ServerExitTest(unittest.TestCase):
         s.close()
         self.assertIn(b"403", resp.split(b"\r\n")[0])
 
+    def test_accepts_https_origin_of_same_host(self):
+        s, resp = _ws_connect(self.port, f"https://127.0.0.1:{self.port}")
+        s.close()
+        self.assertIn(b"101", resp.split(b"\r\n")[0])
+
+    def test_rejects_foreign_or_bad_scheme_origin(self):
+        for origin in ("https://evil.com", f"ftp://127.0.0.1:{self.port}"):
+            s, resp = _ws_connect(self.port, origin)
+            s.close()
+            self.assertIn(b"403", resp.split(b"\r\n")[0], origin)
+
     def test_keep_turns_off_auto_exit(self):
         import json
         import urllib.request

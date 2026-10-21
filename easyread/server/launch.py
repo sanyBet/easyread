@@ -24,6 +24,8 @@ class _Server(ThreadingHTTPServer):
 
 def serve(port: int | None = None, open_browser: bool = False, path: str = "/", exit_on_close: bool = False):
     """exit_on_close：start.cmd / start.sh 启动时为真，页面都关了、后台任务也做完了就退出。"""
+    if config.server_mode():  # 服务器上没有浏览器可开，也不能因为页面关了就退出
+        open_browser = exit_on_close = False
     setup_log(config.LOG_PATH)
     started = time.monotonic()
     cfg = config.load()

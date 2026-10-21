@@ -79,6 +79,15 @@ def load() -> dict:
     return cfg
 
 
+def server_mode() -> bool:
+    """EASYREAD_MODE=server：部署在服务器上给浏览器远程用。每次都重新读环境变量，测试里 patch 才生效。"""
+    return os.environ.get("EASYREAD_MODE") == "server"
+
+
+def mode() -> str:
+    return "server" if server_mode() else "desktop"
+
+
 def temp_library() -> bool:
     return bool(os.environ.get("EASYREAD_LIBRARY") or os.environ.get("COREAD_LIBRARY"))
 
