@@ -9,6 +9,7 @@ shopt -s inherit_errexit 2>/dev/null || true
 
 readonly CF_API="https://api.cloudflare.com/client/v4"
 readonly SECRETS_FILE="${HOME}/.secrets/cloudflare-zt.env"
+readonly CF_BACKUP_DIR="${HOME}/.easyread-cf-backups"
 readonly APP_HOST="easyread.vizce.com"
 readonly ZONE_NAME="vizce.com"
 readonly ORIGIN_SERVICE="http://127.0.0.1:8765"
@@ -49,113 +50,9 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 readonly AUTH_HEADER_FILE="${WORK_DIR}/auth.header"
 # Header file instead of -H "...$TOKEN" keeps the token out of the process list.
 (umask 077 && printf 'Authorization: Bearer %s\n' "$CF_API_TOKEN" >"$AUTH_HEADER_FILE")
-readonly JSON_TOOL="${WORK_DIR}/cf_json.py"
+JSON_TOOL="$(cd "$(dirname "$0")" && pwd)/cf_json.py"
+readonly JSON_TOOL
 readonly ACCOUNT_PATH="/accounts/${CF_ACCOUNT_ID}"
-
-cat >"$JSON_TOOL" <<'PY'
-import json, os, sys
-
-def load(path):
-    with open(path, encoding="utf-8") as handle:
-        return json.load(handle)
-
-def dump(obj, path):
-    with open(path, "w", encoding="utf-8") as handle:
-        json.dump(obj, handle)
-
-def host_of(value):
-    return (value or "").split("/")[0].lower()
-
-def app_hosts(app):
-    hosts = [host_of(app.get("domain"))]
-    hosts += [host_of(d) for d in app.get("self_hosted_domains") or []]
-    hosts += [host_of(d.get("uri")) for d in app.get("destinations") or []]
-    return hosts
-
-def cmd_ok(path):
-    try:
-        sys.exit(0 if load(path).get("success") else 1)
-    except (OSError, ValueError):
-        sys.exit(1)
-
-def cmd_errors(path):
-    try:
-        errors = load(path).get("errors") or []
-    except (OSError, ValueError):
-        print("(non-JSON response)")
-        return
-    print("; ".join(f"{e.get('code')}: {e.get('message')}" for e in errors) or "(no error detail)")
-
-def cmd_first_id(path):
-    result = load(path).get("result") or []
-    print(result[0]["id"] if result else "")
-
-def cmd_result_id(path):
-    print(load(path)["result"]["id"])
-
-def cmd_first_field(path, field):
-    result = load(path).get("result") or []
-    print(result[0].get(field, "") if result else "")
-
-def cmd_ingress_has(path, host):
-    ingress = ((load(path).get("result") or {}).get("config") or {}).get("ingress") or []
-    sys.exit(0 if any(host_of(r.get("hostname")) == host for r in ingress) else 1)
-
-def cmd_ingress_insert(path, host, service, out):
-    config = (load(path).get("result") or {}).get("config") or {}
-    ingress = config.get("ingress") or []
-    if not ingress or ingress[-1].get("hostname"):
-        sys.exit("error: last ingress rule is not a hostname-less catch-all; refusing to guess")
-    ingress.insert(len(ingress) - 1, {"hostname": host, "service": service, "originRequest": {}})
-    config["ingress"] = ingress
-    dump({"config": config}, out)
-    print(f"insert at position {len(ingress) - 1} of {len(ingress)}")
-
-def cmd_otp_idp_id(path):
-    found = [i["id"] for i in load(path).get("result") or [] if i.get("type") == "onetimepin"]
-    print(found[0] if found else "")
-
-def cmd_app_id(path, host):
-    found = [a["id"] for a in load(path).get("result") or [] if host in app_hosts(a)]
-    print(found[0] if found else "")
-
-def cmd_other_app_names(path, host):
-    names = [a.get("name", "?") for a in load(path).get("result") or [] if host not in app_hosts(a)]
-    print(", ".join(names))
-
-def cmd_policy_exists(path, name):
-    sys.exit(0 if any(p.get("name") == name for p in load(path).get("result") or []) else 1)
-
-def cmd_dns_body(host, target, out):
-    dump({"type": "CNAME", "name": host, "content": target, "proxied": True, "ttl": 1}, out)
-
-def cmd_app_body(host, name, duration, idp_id, out):
-    dump({"name": name, "domain": host, "type": "self_hosted", "session_duration": duration,
-          "allowed_idps": [idp_id], "auto_redirect_to_identity": True}, out)
-
-def cmd_policy_body(name, out):
-    email = os.environ["EASYREAD_ACCESS_EMAIL"]
-    dump({"name": name, "decision": "allow", "include": [{"email": {"email": email}}]}, out)
-
-def cmd_idp_body(name, out):
-    dump({"name": name, "type": "onetimepin", "config": {}}, out)
-
-def cmd_org_body(path, bg, text, logo, header, out):
-    org = load(path).get("result") or {}
-    design = {"background_color": bg, "text_color": text, "logo_path": logo, "header_text": header}
-    current = org.get("login_design") or {}
-    if all(current.get(k) == v for k, v in design.items()):
-        print("same")
-        return
-    for read_only in ("created_at", "updated_at"):
-        org.pop(read_only, None)
-    org["login_design"] = {**current, **design}
-    dump(org, out)
-    print("changed")
-
-COMMANDS = {name[4:]: fn for name, fn in globals().items() if name.startswith("cmd_")}
-COMMANDS[sys.argv[1]](*sys.argv[2:])
-PY
 
 json_tool() {
   python3 "$JSON_TOOL" "$@"
@@ -195,6 +92,17 @@ cf_call() {
   fi
 }
 
+# WORK_DIR is wiped on exit, so the pre-PUT GET goes to a persistent dir for rollback.
+backup_before_put() {
+  local step="$1" source_file="$2" target
+  (umask 077 && mkdir -p "$CF_BACKUP_DIR")
+  chmod 700 "$CF_BACKUP_DIR"
+  target="${CF_BACKUP_DIR}/${step}-$(date -u +%Y%m%dT%H%M%SZ).json"
+  (umask 077 && cp -- "$source_file" "$target")
+  chmod 600 "$target"
+  printf '%s' "$target"
+}
+
 step_tunnel_ingress() {
   local current="${WORK_DIR}/tunnel.json" body="${WORK_DIR}/tunnel_put.json"
   local path="${ACCOUNT_PATH}/cfd_tunnel/${CF_TUNNEL_ID}/configurations"
@@ -209,8 +117,10 @@ step_tunnel_ingress() {
     report "tunnel-ingress" "would create ${APP_HOST} -> ${ORIGIN_SERVICE} (${position})"
     return
   fi
+  local backup
+  backup="$(backup_before_put tunnel "$current")"
   cf_call PUT "$path" "${WORK_DIR}/tunnel_put_result.json" "$body"
-  report "tunnel-ingress" "created (${position})"
+  report "tunnel-ingress" "created (${position}; previous config saved to ${backup})"
 }
 
 lookup_zone_id() {
@@ -325,8 +235,10 @@ step_login_branding() {
     report "login-branding" "would update login_design (bg ${LOGIN_BG_COLOR}, text ${LOGIN_TEXT_COLOR}, header ${LOGIN_HEADER_TEXT})"
     return
   fi
+  local backup
+  backup="$(backup_before_put org "$org")"
   cf_call PUT "${ACCOUNT_PATH}/access/organizations" "${WORK_DIR}/org_result.json" "$body"
-  report "login-branding" "created"
+  report "login-branding" "created (previous org saved to ${backup})"
 }
 
 main() {

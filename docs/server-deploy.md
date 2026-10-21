@@ -85,7 +85,8 @@ export EASYREAD_ACCESS_EMAIL=...
 | `deploy/easyread.service` | systemd unit：`EASYREAD_MODE=server`、端口 8765、`Restart=always`、`MemoryMax=1200M` |
 | `deploy/t22_update.sh` | 升级：`git pull --ff-only` → `pip install -e .` → 重启 → 15 秒内等 `/api/version` 成功，否则 exit 1 |
 | `deploy/backup.sh` | 备份 `~/easyread-data` 到 `~/easyread-backups/easyread-YYYY-MM-DD.tgz`，保留最新 7 份 |
-| `deploy/cloudflare_access.sh` | 幂等配置 tunnel ingress、DNS、One-time PIN、Access 应用与策略、登录页品牌；支持 `--dry-run` |
+| `deploy/cloudflare_access.sh` | 幂等配置 tunnel ingress、DNS、One-time PIN、Access 应用与策略、登录页品牌；支持 `--dry-run`；PUT 前备份到 `~/.easyread-cf-backups/` |
+| `deploy/cf_json.py` | `cloudflare_access.sh` 用的 JSON 处理子命令（仅标准库） |
 
 ### 首次安装
 
@@ -115,7 +116,7 @@ export EASYREAD_ACCESS_EMAIL=...
    curl -sf http://127.0.0.1:8765/api/version
    ```
 
-4. 配置 Cloudflare（依赖 3；在存放 `~/.secrets/cloudflare-zt.env` 的机器上运行，只需 bash、curl、python3）：先 dry-run 看计划，确认后正式执行。
+4. 配置 Cloudflare（依赖 3；在存放 `~/.secrets/cloudflare-zt.env` 的机器上从仓库副本运行，`cf_json.py` 需与脚本同目录；只需 bash、curl、python3）：先 dry-run 看计划，确认后正式执行。
 
    ```bash
    deploy/cloudflare_access.sh --dry-run
@@ -182,6 +183,33 @@ curl -sf http://127.0.0.1:8765/api/version
 ```
 
 回滚后处于 detached HEAD，`t22_update.sh` 的 `git pull --ff-only` 会失败；修复发布后先 `git checkout main`，再运行 `deploy/t22_update.sh`。
+
+### 回滚 Cloudflare 改动
+
+`cloudflare_access.sh` 在每次 PUT 前把改动前的 GET 结果存到 `~/.easyread-cf-backups/`（目录 0700、文件 0600），文件名形如 `tunnel-20261021T083000Z.json`、`org-20261021T083000Z.json`，路径会打印在对应步骤的结果行里。dry-run 不写备份。
+
+| 改动 | 回滚方式 |
+|---|---|
+| tunnel ingress | 用备份里的 `result.config` 整体 PUT 回去（命令见下） |
+| 登录页品牌 | 同理，把备份的 `result`（去掉 `created_at`、`updated_at`）PUT 到 `/accounts/$CF_ACCOUNT_ID/access/organizations` |
+| DNS、身份提供方、Access 应用和策略 | 新建的独立对象，不影响其他服务；在 Cloudflare 控制台删除即可 |
+
+恢复 tunnel 配置（在子 shell 里 `source`，变量不留在当前 shell；token 只写进 curl 的 header，不回显）：
+
+```bash
+(
+  source ~/.secrets/cloudflare-zt.env
+  backup=~/.easyread-cf-backups/tunnel-YYYYMMDDTHHMMSSZ.json
+  python3 -c 'import json,sys; print(json.dumps({"config": json.load(open(sys.argv[1]))["result"]["config"]}))' "$backup" |
+    curl -sS -X PUT \
+      -H @<(printf 'Authorization: Bearer %s\n' "$CF_API_TOKEN") \
+      -H 'Content-Type: application/json' --data-binary @- \
+      "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/cfd_tunnel/${CF_TUNNEL_ID}/configurations" |
+    python3 -c 'import json,sys; r=json.load(sys.stdin); print("ok" if r.get("success") else r.get("errors"))'
+)
+```
+
+恢复后确认 `tencent-vps.vizce.com` 等原有服务仍可访问。
 
 ## 验证
 
