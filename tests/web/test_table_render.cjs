@@ -5,7 +5,7 @@ const vm = require("node:vm");
 const { test } = require("node:test");
 
 function render(blocks) {
-  const paperEl = { innerHTML: "" };
+  const paperEl = { innerHTML: "", children: [] };
   const bodyClass = new Set();
   const PR = {
     t: (s, v) => v ? s.replace(/\{(\w+)\}/g, (m, k) => v[k]) : s,
@@ -42,6 +42,7 @@ function render(blocks) {
     fitWide() {},
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../../easyread/web/js/common/markup.js"), "utf8"), { window: { PR }, URL });
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../../easyread/web/js/reader/reconcile.js"), "utf8"), { window: { PR }, document: {} });
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../../easyread/web/js/reader/render.js"), "utf8"), {
     window: { PR },
     document: {

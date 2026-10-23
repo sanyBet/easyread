@@ -242,7 +242,7 @@
         html += blockErrorHtml(b, error);
       }
     }
-    PR.$("#paper").innerHTML = html + pendingHtml(lastPage);
+    const info = PR.reconcilePaper(PR.$("#paper"), html + pendingHtml(lastPage));
     // 一段译文都没有（只读原文）：顶栏的“译文 / 对照”没意义，藏起来
     document.body.classList.toggle("en-only", (S.paper.blocks || []).length > 0 && !(S.paper.blocks || []).some((b) => b && PR.hasZh(b)));
     // 译文语言决定正文字体（base.css 按 data-target 换字体）；1.3 以前译的论文没记语言，都是中文
@@ -250,7 +250,7 @@
     document.documentElement.dataset.target = target;
     const paperEl = document.getElementById("paper");
     if (paperEl) paperEl.lang = target === "zh" ? "zh-CN" : target;  // 让浏览器选对简繁、日文、韩文字形，西文能断词
-    PR.emit("rendered");
+    PR.emit("rendered", info);
   };
 
   /* 只重排一个块（编辑保存后用），不动别的块 */
