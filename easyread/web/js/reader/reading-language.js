@@ -116,8 +116,8 @@
     const title = PR.$("#paper .paper-head h1"), meta = S.paper.meta;
     const secondary = PR.$("#paper .title-en");
     if (title && secondary && meta && meta.title_zh && meta.title_en) {
-      title.innerHTML = PR.titleHtml(first ? meta.title_en : meta.title_zh);
-      secondary.innerHTML = PR.titleHtml(first ? meta.title_zh : meta.title_en);
+      setTitle(title, first ? meta.title_en : meta.title_zh);
+      setTitle(secondary, first ? meta.title_zh : meta.title_en);
       const orig = meta.target === "en" ? "" : "en";  // 译成英文时原标题不一定是英文
       title.lang = first ? orig : "";
       secondary.lang = first ? "" : orig;
@@ -129,6 +129,11 @@
     }
     PR.hideBlockbar && PR.hideBlockbar();
   };
+  // 标题没变就不重写：整页增量重排时保留的标题节点不动，划线也不会被冲掉
+  function setTitle(node, text) {
+    const html = PR.titleHtml(text);
+    if (node.dataset.titleSrc !== html) { node.innerHTML = html; node.dataset.titleSrc = html; }
+  }
   PR.on("rendered", () => PR.applyReadingLanguage());
   PR.on("block-rendered", () => PR.applyReadingLanguage());
 })(window.PR);
