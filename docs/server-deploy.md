@@ -194,7 +194,7 @@ curl -sf http://127.0.0.1:8765/api/version
 | 改动 | 回滚方式 |
 |---|---|
 | tunnel ingress | 用备份里的 `result.config` 整体 PUT 回去（命令见下） |
-| 登录页品牌 | 同理，把备份的 `result`（去掉 `created_at`、`updated_at`）PUT 到 `/accounts/$CF_ACCOUNT_ID/access/organizations` |
+| 登录页品牌 | 只取备份 `result` 里 `deploy/cf_json.py` 的 `ORG_WRITABLE` 字段加 `login_design`，PUT 到 `/accounts/$CF_ACCOUNT_ID/access/organizations`；原样回写整个对象会被拒（`12062 invalid_org_config`） |
 | DNS、身份提供方、Access 应用和策略 | 新建的独立对象，不影响其他服务；在 Cloudflare 控制台删除即可 |
 
 恢复 tunnel 配置（在子 shell 里 `source`，变量不留在当前 shell；token 只写进 curl 的 header，不回显）：
@@ -220,10 +220,10 @@ curl -sf http://127.0.0.1:8765/api/version
 
 | 编号 | 验证内容 | 方法 | 结果 |
 |---|---|---|---|
-| V0 | unit 文件语法 | `sudo systemd-analyze verify /etc/systemd/system/easyread.service` 无输出 | |
-| V5 | 公网认证 | 无 cookie 时 `curl -I https://easyread.vizce.com/api/library` 返回 302 到 `*.cloudflareaccess.com`；浏览器用放行邮箱登录成功，其他邮箱收不到验证码 | |
-| V6 | 线上链路 | 手机加电脑：导入一篇 arXiv 论文，翻译 1 页，问 AI 一次（流式逐段出现），写一条笔记，另一台设备 5 秒内看到 | |
-| V7 | 自愈 | `sudo kill -9 $(systemctl show -p MainPID --value easyread)`，10 秒内 `systemctl is-active easyread` 为 active | |
-| V8 | web 端禁用接口 | 登录后访问 `/api/library/reveal` 等接口返回 403 `web_unavailable` | |
-| V9 | 备份 | 手动运行 `deploy/backup.sh`，`~/easyread-backups` 下出现当天 tgz，`tar tzf` 可列出 `easyread-data/` | |
-| V10 | 幂等 | 再次运行 `deploy/cloudflare_access.sh --dry-run`，除 `access-guard` 说明行外所有步骤为 `exists` 或 `skipped` | |
+| V0 | unit 文件语法 | `sudo systemd-analyze verify /etc/systemd/system/easyread.service` 无输出 | ✅ 2026-10-23：easyread.service 无告警（输出里只有其他 unit 的既有告警） |
+| V5 | 公网认证 | 无 cookie 时 `curl -I https://easyread.vizce.com/api/library` 返回 302 到 `*.cloudflareaccess.com`；浏览器用放行邮箱登录成功，其他邮箱收不到验证码 | ✅ curl 返回 302 到 `lively-queen-e7f1.cloudflareaccess.com`；浏览器登录待本人验证 |
+| V6 | 线上链路 | 手机加电脑：导入一篇 arXiv 论文，翻译 1 页，问 AI 一次（流式逐段出现），写一条笔记，另一台设备 5 秒内看到 | ⏳ 待本人：登录后填 API Key 再走一遍 |
+| V7 | 自愈 | `sudo kill -9 $(systemctl show -p MainPID --value easyread)`，10 秒内 `systemctl is-active easyread` 为 active | ✅ 2026-10-23：4 秒恢复 |
+| V8 | web 端禁用接口 | 登录后访问 `/api/library/reveal` 等接口返回 403 `web_unavailable` | ✅ 2026-10-23：reveal、reveal/x、shutdown、migrate/start 均 403 |
+| V9 | 备份 | 手动运行 `deploy/backup.sh`，`~/easyread-backups` 下出现当天 tgz，`tar tzf` 可列出 `easyread-data/` | ✅ 2026-10-23：生成 easyread-2026-10-23.tgz，可列出 easyread-data/ |
+| V10 | 幂等 | 再次运行 `deploy/cloudflare_access.sh --dry-run`，除 `access-guard` 说明行外所有步骤为 `exists` 或 `skipped` | ✅ 2026-10-23：全部 exists |

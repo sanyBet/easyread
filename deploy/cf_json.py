@@ -90,6 +90,11 @@ def cmd_policy_body(name, out):
 def cmd_idp_body(name, out):
     dump({"name": name, "type": "onetimepin", "config": {}}, out)
 
+ORG_WRITABLE = ("name", "auth_domain", "is_ui_read_only", "allow_authenticate_via_warp",
+                "auto_redirect_to_identity", "session_duration", "user_seat_expiration_inactive_time",
+                "warp_auth_session_duration", "ui_read_only_toggle_reason")
+
+
 def cmd_org_body(path, bg, text, logo, header, out):
     org = load(path).get("result") or {}
     design = {"background_color": bg, "text_color": text, "logo_path": logo, "header_text": header}
@@ -97,10 +102,11 @@ def cmd_org_body(path, bg, text, logo, header, out):
     if all(current.get(k) == v for k, v in design.items()):
         print("same")
         return
-    for read_only in ("created_at", "updated_at"):
-        org.pop(read_only, None)
-    org["login_design"] = {**current, **design}
-    dump(org, out)
+    # Echoing the whole GET object back is rejected (12062 invalid_org_config): it carries
+    # read-only/internal fields. Send only the writable settings this org already has.
+    body = {key: org[key] for key in ORG_WRITABLE if key in org}
+    body["login_design"] = {**current, **design}
+    dump(body, out)
     print("changed")
 
 COMMANDS = {name[4:]: fn for name, fn in globals().items() if name.startswith("cmd_")}

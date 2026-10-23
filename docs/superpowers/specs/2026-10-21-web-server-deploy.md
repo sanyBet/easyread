@@ -1,7 +1,7 @@
 ---
 name: web-server-deploy
 description: "EasyRead web 化：服务器模式、web 版功能裁剪、文献库页移动端适配、t22 + Cloudflare Access 部署；涉及服务器部署、EASYREAD_MODE、web 端禁用功能、Access 配置时读取"
-status: draft
+status: active
 ---
 
 # EasyRead web 化与 t22 部署（spec）
