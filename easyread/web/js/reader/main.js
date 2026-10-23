@@ -75,24 +75,46 @@
   PR.on("reader", (op) => { if (op && op.op === "progress") return; if (!busy()) refreshNotes(); });
 
   const seen = new Set();
+  const BUSY_POLL_MS = 800;
+  const pendingChanges = new Set();  // 滑动或编辑期间攒下的变化，空闲后合成一次重渲染
+  let isWaitingForEditor = false;
   PR.on("remote", (changed) => {
-    if (changed.includes("job")) PR.renderJobState();
-    const after = () => {
-      if (changed.includes("paper") || changed.includes("reader")) {
-        PR.rerenderKeepingPlace();
-        const m = S.paper.meta || {};
-        PR.$(".bar-title").innerHTML = PR.titleHtml(m.short_zh || m.title_zh || m.title_en || "");
-      } else if (changed.includes("job")) {
-        const pend = PR.$(".pending-pages .pending, .page-cap");
-        if (pend || (S.job || {}).state === "confirm") PR.rerenderKeepingPlace();
-      }
-      PR.applyMarks(); PR.renderMargin();
-      if (PR.notesPanelOpen()) PR.renderNotesPanel();
-      if (body.classList.contains("drawer-open")) PR.renderDrawer();
-      if (changed.includes("discussion")) announceNew();
-    };
-    if (busy()) { const t = setInterval(() => { if (!busy()) { clearInterval(t); after(); } }, 800); } else after();
+    if (changed.includes("job")) PR.renderJobState();  // 进度条很轻，立即更新
+    changed.forEach((c) => pendingChanges.add(c));
+    PR.whenScrollIdle(applyRemote);
   });
+
+  function applyRemote() {
+    if (isWaitingForEditor || !pendingChanges.size) return;
+    if (busy()) {
+      isWaitingForEditor = true;
+      const t = setInterval(() => {
+        if (busy()) return;
+        clearInterval(t);
+        isWaitingForEditor = false;
+        PR.whenScrollIdle(applyRemote);
+      }, BUSY_POLL_MS);
+      return;
+    }
+    const changed = Array.from(pendingChanges);
+    pendingChanges.clear();
+    after(changed);
+  }
+
+  function after(changed) {
+    if (changed.includes("paper") || changed.includes("reader")) {
+      PR.rerenderKeepingPlace();
+      const m = S.paper.meta || {};
+      PR.$(".bar-title").innerHTML = PR.titleHtml(m.short_zh || m.title_zh || m.title_en || "");
+    } else if (changed.includes("job")) {
+      const pend = PR.$(".pending-pages .pending, .page-cap");
+      if (pend || (S.job || {}).state === "confirm") PR.rerenderKeepingPlace();
+    }
+    PR.applyMarks(); PR.renderMargin();
+    if (PR.notesPanelOpen()) PR.renderNotesPanel();
+    if (body.classList.contains("drawer-open")) PR.renderDrawer();
+    if (changed.includes("discussion")) announceNew();
+  }
 
   function announceNew() {
     const fresh = (S.discussion.entries || []).filter((e) => !seen.has(e.id));
