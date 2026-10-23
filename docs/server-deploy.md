@@ -222,7 +222,7 @@ curl -sf http://127.0.0.1:8765/api/version
 |---|---|---|---|
 | V0 | unit 文件语法 | `sudo systemd-analyze verify /etc/systemd/system/easyread.service` 无输出 | ✅ 2026-10-23：easyread.service 无告警（输出里只有其他 unit 的既有告警） |
 | V5 | 公网认证 | 无 cookie 时 `curl -I https://easyread.vizce.com/api/library` 返回 302 到 `*.cloudflareaccess.com`；浏览器用放行邮箱登录成功，其他邮箱收不到验证码 | ✅ 2026-10-23：curl 返回 302 到 `lively-queen-e7f1.cloudflareaccess.com`；本人浏览器登录通过 |
-| V6 | 线上链路 | 手机加电脑：导入一篇 arXiv 论文，翻译 1 页，问 AI 一次（流式逐段出现），写一条笔记，另一台设备 5 秒内看到 | ✅ 2026-10-23：本人手机加电脑验证通过。注意：后台翻译进行中时，每写入一页阅读页就整页重渲染一次（模拟手机 CPU 时长任务约 150ms），滑动会一顿一顿；译完即恢复流畅 |
+| V6 | 线上链路 | 手机加电脑：导入一篇 arXiv 论文，翻译 1 页，问 AI 一次（流式逐段出现），写一条笔记，另一台设备 5 秒内看到 | ✅ 2026-10-23：本人手机加电脑验证通过。注意：后台翻译进行中时，每写入一页阅读页就整页重渲染一次（模拟手机 CPU 时长任务约 150ms），滑动会一顿一顿；译完即恢复流畅。已于 ad8efff 修复：滑动中不刷新，停下后只替换有变化的段落（见 [reader-smooth-updates spec](superpowers/specs/2026-10-23-reader-smooth-updates.md)） |
 | V7 | 自愈 | `sudo kill -9 $(systemctl show -p MainPID --value easyread)`，10 秒内 `systemctl is-active easyread` 为 active | ✅ 2026-10-23：4 秒恢复 |
 | V8 | web 端禁用接口 | 登录后访问 `/api/library/reveal` 等接口返回 403 `web_unavailable` | ✅ 2026-10-23：reveal、reveal/x、shutdown、migrate/start 均 403 |
 | V9 | 备份 | 手动运行 `deploy/backup.sh`，`~/easyread-backups` 下出现当天 tgz，`tar tzf` 可列出 `easyread-data/` | ✅ 2026-10-23：生成 easyread-2026-10-23.tgz，可列出 easyread-data/ |
