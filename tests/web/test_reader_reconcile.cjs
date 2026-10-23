@@ -157,6 +157,36 @@ test("node replaced outside reconcile is replaced again on next change", () => {
   assert.notEqual(box.children[0], stranger);
 });
 
+/* renderBlock 单独换块后，回到原来那串也要重排；没变的块保住展开状态 */
+test("block swapped by renderBlock is reconciled even when html returns to the old string", () => {
+  const PR = reconciler(), box = fakeContainer();
+  PR.reconcilePaper(box, blk("a", "T") + blk("b", "B"));
+  const old = box.children[0];
+  old.parentNode = box;
+  const edited = fakeElement(blk("a", "X"));
+  PR.adoptPaperNode(old, edited);
+  edited.classList.add("show-en");
+  box.insertBefore(edited, old);
+  old.remove();
+  PR.reconcilePaper(box, blk("a", "T") + blk("b", "B"));
+  assert.deepEqual(texts(box), ["T", "B"]);
+  assert.ok(box.children[0].classList.contains("show-en"));
+});
+
+test("block swapped by renderBlock with unchanged source is kept", () => {
+  const PR = reconciler(), box = fakeContainer();
+  PR.reconcilePaper(box, blk("a", "A") + blk("b", "B"));
+  const old = box.children[0];
+  old.parentNode = box;
+  const same = fakeElement(blk("a", "A"));
+  PR.adoptPaperNode(old, same);
+  box.insertBefore(same, old);
+  old.remove();
+  const info = PR.reconcilePaper(box, blk("a", "A") + blk("b", "B2"));
+  assert.equal(box.children[0], same);
+  assert.equal(info.replaced.length, 1);
+});
+
 /* 离线导出版：#pr-data 里带数据，store 走 static 模式，整页重排也只换变了的块 */
 async function staticReader(paper) {
   const paperEl = fakeContainer();

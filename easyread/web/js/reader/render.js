@@ -217,7 +217,8 @@
       ? '<div class="err">' + PR.esc(job.error || job.message || "") + '</div><p class="hint">' + PR.t("整理原文需要可用模型。请检查模型设置后重试；重试使用当前翻译模型，已整理的内容会保留。") +
         '</p><button class="btn sm line" data-t="model-settings">' + PR.t("模型设置") + '</button> <button class="btn sm accent" data-t="read-rest">' + PR.t("重试整理原文") + "</button>"
       : "";
-    return '<div class="pending-pages"><div class="pending">' + head + recovery + "</div>" + miss.map(origFig).join("") + "</div>";
+    // 进度头单独成顶层节点：翻译中每次轮询只换它，下面的原页图和文字层留着
+    return '<div class="pending pending-head">' + head + recovery + '</div><div class="pending-pages">' + miss.map(origFig).join("") + "</div>";
   }
 
   PR.renderPaper = function () {
@@ -266,6 +267,7 @@
       fresh.innerHTML = blockErrorHtml(b, error);
     }
     const nn = fresh.firstChild;
+    PR.adoptPaperNode(node, nn);
     ["show-en", "notes-open", "current"].forEach((c) => node.classList.contains(c) && nn.classList.add(c));
     node.replaceWith(nn);
     PR.emit("block-rendered", id);

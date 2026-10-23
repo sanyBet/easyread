@@ -99,7 +99,7 @@
       const zh = en.parentElement;
       const original = document.createElement(zh.tagName);
       original.className = "en heading-original";
-      if (original.lang !== "en") original.lang = "en";
+      original.lang = "en";
       const num = zh.querySelector(".num");
       if (num) original.append(num.cloneNode(true));
       original.append(...en.childNodes);

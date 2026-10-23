@@ -37,9 +37,13 @@
 
   const markScroll = () => { lastScrollAt = activity._now(); };
   window.addEventListener("scroll", markScroll, { passive: true });
-  window.addEventListener("touchstart", () => { isTouching = true; markScroll(); }, { passive: true });
   // 多指时抬起一根，其余手指仍按着
   const release = (e) => { isTouching = !!(e && e.touches && e.touches.length); markScroll(); schedule(); };
+  // 手指下的节点按住期间被换掉，touchend 不再冒泡到 window，只发给原节点，所以原节点上也要听
+  window.addEventListener("touchstart", (e) => {
+    isTouching = true; markScroll();
+    if (e && e.target && e.target.addEventListener) ["touchend", "touchcancel"].forEach((t) => e.target.addEventListener(t, release, { passive: true, once: true }));
+  }, { passive: true });
   window.addEventListener("touchend", release, { passive: true });
   window.addEventListener("touchcancel", release, { passive: true });
 })(window.PR);

@@ -72,6 +72,14 @@
     });
   }
 
+  // renderBlock 绕过整页重排单独换块：登记新节点，并作废“整串没变”的捷径，下次重排才会对照到它
+  PR.adoptPaperNode = function (old, fresh) {
+    const rec = records.get(old);
+    const id = fresh.getAttribute("data-id");
+    records.set(fresh, { src: fresh.outerHTML, key: rec ? rec.key : "id:" + id });
+    if (old.parentNode) lastHtml.delete(old.parentNode);
+  };
+
   PR.reconcilePaper = function (container, html) {
     if (!container.children.length) {
       lastHtml.set(container, html);

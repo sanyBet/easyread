@@ -107,7 +107,7 @@
       const m = S.paper.meta || {};
       PR.$(".bar-title").innerHTML = PR.titleHtml(m.short_zh || m.title_zh || m.title_en || "");
     } else if (changed.includes("job")) {
-      const pend = PR.$(".pending-pages .pending, .page-cap");
+      const pend = PR.$(".pending-head, .pending-pages .pending, .page-cap");
       if (pend || (S.job || {}).state === "confirm") PR.rerenderKeepingPlace();
     }
     PR.applyMarks(); PR.renderMargin();
