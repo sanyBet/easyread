@@ -13,8 +13,9 @@
   }
   function prepare() {
     document.querySelectorAll("#paper .figure-media img, #paper .blk-table .tbl-wrap").forEach((el) => {
-      el.draggable = true;
-      el.title = PR.t("拖到笔记以关联图表");
+      const tip = PR.t("拖到笔记以关联图表");
+      if (!el.draggable) el.draggable = true;  // 保留下来的节点不重复写，免得每次重排都记变更
+      if (el.title !== tip) el.title = tip;
     });
   }
   PR.on("rendered", prepare);

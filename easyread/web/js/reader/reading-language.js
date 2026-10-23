@@ -99,7 +99,7 @@
       const zh = en.parentElement;
       const original = document.createElement(zh.tagName);
       original.className = "en heading-original";
-      original.lang = "en";
+      if (original.lang !== "en") original.lang = "en";
       const num = zh.querySelector(".num");
       if (num) original.append(num.cloneNode(true));
       original.append(...en.childNodes);
@@ -109,7 +109,7 @@
     PR.$$("#paper .en").forEach((en) => {
       const zh = Array.from(en.parentElement.children).find((n) => n.classList.contains("zh"));
       if (!zh) return;
-      zh.classList.add("paired-translation");
+      if (!zh.classList.contains("paired-translation")) zh.classList.add("paired-translation");  // 同值也会记一次变更
       if (first) { if (en.nextElementSibling !== zh) zh.before(en); }
       else if (zh.nextElementSibling !== en) zh.after(en);
     });
@@ -119,17 +119,19 @@
       setTitle(title, first ? meta.title_en : meta.title_zh);
       setTitle(secondary, first ? meta.title_zh : meta.title_en);
       const orig = meta.target === "en" ? "" : "en";  // 译成英文时原标题不一定是英文
-      title.lang = first ? orig : "";
-      secondary.lang = first ? "" : orig;
+      setLang(title, first ? orig : "");
+      setLang(secondary, first ? "" : orig);
     }
     const description = PR.$(".reading-language-description");
     if (description && !document.body.classList.contains("en-only") && !((S.paper.translation || {}).en_pages || []).length) {
       const v = PR.readingView();
-      description.textContent = v === "both" ? PR.t("正文是原文和译文") : v === "original" ? (targetCode() === "en" ? PR.t("正文是原文") : PR.t("正文是英文原文")) : PR.t("正文是译文");
+      const text = v === "both" ? PR.t("正文是原文和译文") : v === "original" ? (targetCode() === "en" ? PR.t("正文是原文") : PR.t("正文是英文原文")) : PR.t("正文是译文");
+      if (description.textContent !== text) description.textContent = text;
     }
     PR.hideBlockbar && PR.hideBlockbar();
   };
   // 标题没变就不重写：整页增量重排时保留的标题节点不动，划线也不会被冲掉
+  const setLang = (node, lang) => { if (node.lang !== lang) node.lang = lang; };
   function setTitle(node, text) {
     const html = PR.titleHtml(text);
     if (node.dataset.titleSrc !== html) { node.innerHTML = html; node.dataset.titleSrc = html; }

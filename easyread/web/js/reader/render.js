@@ -249,7 +249,8 @@
     const target = (S.paper.meta || {}).target || ((S.paper.blocks || []).some((b) => b && PR.hasZh(b)) ? "zh" : PR.target);
     document.documentElement.dataset.target = target;
     const paperEl = document.getElementById("paper");
-    if (paperEl) paperEl.lang = target === "zh" ? "zh-CN" : target;  // 让浏览器选对简繁、日文、韩文字形，西文能断词
+    const lang = target === "zh" ? "zh-CN" : target;
+    if (paperEl && paperEl.lang !== lang) paperEl.lang = lang;  // 让浏览器选对简繁、日文、韩文字形，西文能断词
     PR.emit("rendered", info);
   };
 
